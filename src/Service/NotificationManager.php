@@ -46,7 +46,8 @@ class NotificationManager
         if ($prices->count() < 2)
             return;
 
-        $user = $product->getUser();
+        if (!$user = $product->getUser())
+            return;
 
         if ($notificationRule = $this->getNotificationRuleIfPriceChanged($product))
             if (!$notificationRule->isNotified())

@@ -4,6 +4,7 @@ namespace App\Command;
 
 use App\Command\Traits\Lock;
 use App\Tracker\TrackerFactory;
+use App\Entity\Product;
 use Symfony\Bundle\FrameworkBundle\Command\ContainerAwareCommand;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
@@ -55,19 +56,15 @@ class StartTrackingCommand extends ContainerAwareCommand
             $this->setLocked(true);
         }
 
-        $em = $this->getContainer()->get('doctrine.orm.entity_manager');
-
         $count = 0;
 
         foreach ($this->trackProducts() as $tracked)
         {
             $count++;
-            $em->persist($tracked);
-            $em->flush();
+            $this->notifyForProduct($io, $tracked);
         }
 
-        if (!$io->isVerbose())
-            $this->setLocked(false);
+        $this->setLocked(false);
 
         $io->success([
             "The queue is empty. The process is over.",
@@ -113,6 +110,7 @@ class StartTrackingCommand extends ContainerAwareCommand
         {
             sleep($this->checkForLockInterval);
 
+            // kill child process
             if (!$this->isLocked())
                 exit;
         }
@@ -125,7 +123,6 @@ class StartTrackingCommand extends ContainerAwareCommand
     {
         $io = $this->io;
         $em = $this->getContainer()->get('doctrine.orm.entity_manager');
-        $notifier = $this->getContainer()->get('app.notification_manager');
 
         $products = $em->getRepository('App:Product')->findBy([], [
             'nextTrackingTime' => 'ASC'
@@ -133,32 +130,47 @@ class StartTrackingCommand extends ContainerAwareCommand
 
         foreach ($products as $product)
         {
-            $timeDiff = (new \DateTime())->diff($product->getNextTrackingTime())->i;
+            $now = new \DateTime();
+            $trackingTime = $product->getNextTrackingTime();
 
-            $waitTime = $timeDiff < 0 ? 0 : $timeDiff;
+            $waitTime = $trackingTime < $now ? 0 : $trackingTime->diff($now)->i;
 
             $io->writeln("<question>{$product}</question> <info>will be updated after {$waitTime} minutes...</info>");
 
             $this->spendTime($waitTime);
 
             try {
+                $io->writeln("<question>{$product}</question> <info>updating...</info>");
+
                 $tracker = TrackerFactory::createFromProduct($product);
                 $tracker->fetchProduct();
 
+                $em->persist($product);
+                $em->flush();
+
                 $io->writeln("<question>{$product}</question> <info>updated.</info>");
             } catch (\Exception $e) {
-                $io->writeln('<error>An error occurred while tracking product:</error> ' . $e->getMessage());
-            }
-
-            try {
-                $notifier->notify($product, function($product) use ($io) {
-                    $io->writeln("<info>Change detected for <question>{$product}</question>, information of change was sent to user.</info>");
-                });
-            } catch (\Exception $e) {
-                $io->writeln('<error>An error occurred while notifying for the change of product price:</error> ' . $e->getMessage());
+                $io->error('An error occurred while tracking product: ' . $e->getMessage());
             }
 
             yield $product;
         }
+    }
+
+    public function notifyForProduct(OutputStyle $io, Product $product)
+    {
+        $em = $this->getContainer()->get('doctrine.orm.entity_manager');
+        $notifier = $this->getContainer()->get('app.notification_manager');
+
+        try {
+            $notifier->notify($product, function($product) use ($io) {
+                $io->writeln("<info>Change detected for <question>{$product}</question>, information of change was sent to user.</info>");
+            });
+        } catch (\Exception $e) {
+            $io->writeln('<error>An error occurred while notifying for the change of product price:</error> ' . $e->getMessage());
+        }
+
+        $em->persist($product);
+        $em->flush();
     }
 }

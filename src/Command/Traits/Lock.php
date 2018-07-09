@@ -17,9 +17,9 @@ trait Lock
     protected function setLocked(bool $locked)
     {
         if ($locked)
-            touch($this->getLockFile());
+            @touch($this->getLockFile());
         else
-            unlink($this->getLockFile());
+            @unlink($this->getLockFile());
     }
 
     protected function isLocked(): bool

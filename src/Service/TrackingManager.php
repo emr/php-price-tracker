@@ -2,6 +2,7 @@
 
 namespace App\Service;
 
+use App\Command\RestartTrackingCommand;
 use App\Command\StartTrackingCommand;
 use App\Command\StopTrackingCommand;
 use Symfony\Component\HttpFoundation\Session\Session;
@@ -16,10 +17,7 @@ class TrackingManager
     private $session;
 
     /** @var string */
-    private $startTrackingCommand;
-
-    /** @var string */
-    private $stopTrackingCommand;
+    private $consolePath;
 
     /** @var string */
     private $processLockFile;
@@ -33,8 +31,7 @@ class TrackingManager
     public function __construct(Session $session, string $consolePath, string $processLockFile, int $lockTime)
     {
         $this->session = $session;
-        $this->startTrackingCommand = "{$consolePath} " . StartTrackingCommand::NAME;
-        $this->stopTrackingCommand = "{$consolePath} " . StopTrackingCommand::NAME;
+        $this->consolePath = $consolePath;
         $this->processLockFile = $processLockFile;
         $this->lockTime = $lockTime;
     }
@@ -74,7 +71,7 @@ class TrackingManager
         if ($this->isTracking() && $this->isLocked())
             return;
 
-        $process = new Process($this->startTrackingCommand);
+        $process = new Process("{$this->consolePath} " . StartTrackingCommand::NAME);
         $process->run();
 
         $this->setLocked(true);
@@ -88,7 +85,22 @@ class TrackingManager
         if ($this->isLocked())
             return;
 
-        $process = new Process($this->stopTrackingCommand);
+        $process = new Process("{$this->consolePath} " . StopTrackingCommand::NAME);
+        $process->run();
+
+        $this->setLocked(false);
+    }
+
+    /**
+     * Restart tracking process
+     */
+    public function restartTracking()
+    {
+        if ($this->isLocked())
+            return;
+
+        $process = new Process("{$this->consolePath} " . RestartTrackingCommand::NAME);
+        $process->setTimeout(5);
         $process->run();
 
         $this->setLocked(false);

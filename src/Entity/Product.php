@@ -49,7 +49,7 @@ class Product
      * @ORM\OneToMany(targetEntity="App\Entity\Price", mappedBy="product", cascade={"persist"})
      * @ORM\OrderBy({"id": "DESC"})
      */
-    private $prices = [];
+    private $prices;
 
     /**
      * @var integer

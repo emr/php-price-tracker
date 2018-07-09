@@ -23,6 +23,7 @@ class TrackController extends Controller
     {
         $em = $this->getDoctrine()->getManager();
         $serializer = $this->get('serializer');
+        $trackingManager = $this->get('app.tracking_manager');
 
         $status = Response::HTTP_BAD_REQUEST;
         $product = null;
@@ -43,6 +44,8 @@ class TrackController extends Controller
 
             $em->persist($product);
             $em->flush();
+
+            $trackingManager->restartTracking();
 
             $status = Response::HTTP_CREATED;
 
