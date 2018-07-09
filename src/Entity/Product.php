@@ -203,10 +203,10 @@ class Product
     }
 
     /**
-     * @param User $user
+     * @param null|User $user
      * @return self
      */
-    public function setUser(User $user): self
+    public function setUser(?User $user = null): self
     {
         $this->user = $user;
 
@@ -214,9 +214,9 @@ class Product
     }
 
     /**
-     * @return User
+     * @return null|User
      */
-    public function getUser(): User
+    public function getUser(): ?User
     {
         return $this->user;
     }

@@ -19,6 +19,9 @@
         <!-- ###+ nelmio/cors-bundle ### -->
         <env name="CORS_ALLOW_ORIGIN" value="^https?://localhost:?[0-9]*$"/>
         <!-- ###- nelmio/cors-bundle ### -->
+
+        <env name="SYMFONY_DEPRECATIONS_HELPER" value="weak" />
+        <env name="DATABASE_URL" value="mysql://db_user:db_password@127.0.0.1:3306/db_name" />
     </php>
 
     <testsuites>

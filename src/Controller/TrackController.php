@@ -11,28 +11,30 @@ use GuzzleHttp\Exception\RequestException;
 use Symfony\Bundle\FrameworkBundle\Controller\Controller;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
 
 class TrackController extends Controller
 {
     /**
-     * @Route("/api/track", name="track", methods={"get"})
+     * @Route("/api/track", name="track", methods={"post"})
      */
     public function trackAction(Request $request)
     {
         $em = $this->getDoctrine()->getManager();
         $serializer = $this->get('serializer');
 
-//        $url = $request->request->get('url');
-//        $interval = $request->request->get('interval');
-
-        $url = $request->query->get('url');
-        $interval = $request->query->get('interval');
-
-        $error = true;
+        $status = Response::HTTP_BAD_REQUEST;
         $product = null;
+        $error = true;
 
         try {
+            if (empty($url = $request->request->get('url', null)))
+                throw new \InvalidArgumentException('There is no URL data.');
+
+            if (empty($interval = $request->request->get('interval', null)))
+                throw new \InvalidArgumentException('There is no interval value.');
+
             $tracker = TrackerFactory::createFromURL($url);
             $product = $tracker->fetchProduct();
 
@@ -41,6 +43,8 @@ class TrackController extends Controller
 
             $em->persist($product);
             $em->flush();
+
+            $status = Response::HTTP_CREATED;
 
             $message = 'The product is tracking now.';
             $error = false;
@@ -65,16 +69,19 @@ class TrackController extends Controller
         {
             $message = sprintf("Could not send request host '%s'", parse_url($url)['host']);
         }
+        catch (\InvalidArgumentException $e)
+        {
+            $message = $e->getMessage();
+        }
         catch (\Exception $e)
         {
-            $message = 'An error occurred.';
-            if ($this->getParameter('kernel.debug'))
-                throw $e;
+            $message = $e->getMessage();
+            $status = Response::HTTP_INTERNAL_SERVER_ERROR;
         }
 
         return new JsonResponse([
             ($error ? 'error' : 'success') => $message,
             'product' => $error ? null : $serializer->normalize($product),
-        ]);
+        ], $status);
     }
 }
