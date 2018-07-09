@@ -20,6 +20,9 @@ class StartTrackingCommand extends ContainerAwareCommand
     /** @var OutputStyle */
     protected $io;
 
+    /** @var int seconds */
+    protected $checkForLockInterval = 1;
+
     use Lock;
 
     protected function configure()
@@ -48,6 +51,8 @@ class StartTrackingCommand extends ContainerAwareCommand
         else
         {
             $io->title('Product tracking');
+            $io->writeln(['CTRL + C to be quiet.', '']);
+            $this->setLocked(true);
         }
 
         $em = $this->getContainer()->get('doctrine.orm.entity_manager');
@@ -104,10 +109,9 @@ class StartTrackingCommand extends ContainerAwareCommand
 
     protected function spendTime(int $minutes)
     {
-        $checkingInterval = 1;
-        for ($i = 0; $i < $minutes * 60 / $checkingInterval; $i++)
+        for ($i = 0; $i < $minutes * 60 / $this->checkForLockInterval; $i++)
         {
-            sleep($checkingInterval);
+            sleep($this->checkForLockInterval);
 
             if (!$this->isLocked())
                 exit;
@@ -129,7 +133,7 @@ class StartTrackingCommand extends ContainerAwareCommand
 
         foreach ($products as $product)
         {
-            $timeDiff = $product->getNextTrackingTime()->diff(new \DateTime())->i;
+            $timeDiff = (new \DateTime())->diff($product->getNextTrackingTime())->i;
 
             $waitTime = $timeDiff < 0 ? 0 : $timeDiff;
 
