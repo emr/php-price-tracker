@@ -1,0 +1,43 @@
+parameters:
+    locale: 'en'
+    notification_mail_template: '::emails/notification.html.twig'
+    tracking_process.lock_time: 0  # tracking process never refresh in 10 minutes after start
+                                    # set '0' for disable locking.
+    tracking_process.lock_file: '%kernel.project_dir%/.tracking-process'
+
+services:
+    # default configuration for services in *this* file
+    _defaults:
+        autowire: false
+        autoconfigure: true
+        public: true
+
+    App\:
+        resource: '../src/*'
+        exclude: '../src/{Entity,Migrations,Tests,Kernel.php}'
+
+    App\Controller\:
+        resource: '../src/Controller'
+        tags: ['controller.service_arguments']
+
+    app.tracking_manager:
+        class: App\Service\TrackingManager
+        arguments:
+            - '@session'
+            - '%kernel.project_dir%/bin/console'
+            - '%tracking_process.lock_file%'
+            - '%tracking_process.lock_time%'
+
+    app.notification_manager:
+        class: App\Service\NotificationManager
+        arguments:
+            - '@mailer'
+            - '@templating'
+            - '@translator'
+            - '%notification_mail_template%'
+
+    App\EventListener\TrackingManagerSubscriber:
+        arguments:
+            - '@app.tracking_manager'
+        tags:
+            - { name: doctrine.event_subscriber, connection: default }

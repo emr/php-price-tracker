@@ -1,0 +1,19 @@
+<style>
+    * {
+        font-family: 'Roboto', 'Helvetica Neue','Source Sans Pro', sans-serif;
+    }
+</style>
+<table cellspacing="10" cellpadding="10" border="0" align="center">
+    <tr align="center">
+        <td>
+            {{ 'notification.message'|trans({ '%user.name%': product.user.name })|raw }}
+        </td>
+    </tr>
+    <tr align="center">
+        <td>
+            {{ 'notification.compare_message'|trans(
+                { '%price%': '<strong>'~product.price.last.price~'</strong>' })
+            |raw }}
+        </td>
+    </tr>
+</table>

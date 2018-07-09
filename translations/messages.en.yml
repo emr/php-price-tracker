@@ -1,0 +1,3 @@
+notification.title: 'There is a change in price of product you followed!'
+notification.message: 'Hey %user.name%! There is a change in price of product you followed.'
+notification.compare_message: 'The new price of product is %price%. I think do not miss this product!'

@@ -1,0 +1,5 @@
+app:
+    path:         /
+    controller:   Symfony\Bundle\FrameworkBundle\Controller\TemplateController::templateAction
+    defaults:
+        template: app.html.twig
